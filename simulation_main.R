@@ -7,8 +7,6 @@
 ## author: Willson Gaul
 ## created: 9 Jun 2017
 ## last modified: 21 June 2017
-#       - Changed | to || in some if statements
-#       - 
 ##
 #########################
 
