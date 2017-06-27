@@ -6,7 +6,7 @@
 ##
 ## author: Willson Gaul
 ## created: 9 Jun 2017
-## last modified: 21 June 2017
+## last modified: 27 June 2017
 ##
 #########################
 
@@ -359,6 +359,9 @@ sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1,
   if(nrow(sp.occurrences) > 1) {
     stop("More than one row passed into the sp.occurrences argument.")
   }
+  if(n < 1) {
+    return()
+  }
   
   # initialize results df with a row for each sample (visit) and a column
   # for each species plus a column for site name
@@ -417,3 +420,52 @@ sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1,
 # true_community <- generate_community_data(species.df = species_flex, 
 #                                         site.df = sites)
 # true_community
+
+## create sites ---------------------------------
+# create hectad names
+make_name <- function(prefix, number) {
+  name <- paste(prefix, number, sep = "")
+  name
+}
+hec_names <- mapply(make_name, prefix = rep("H"), 
+                    number = 01:50, 
+                    USE.NAMES = F)
+# define distances from population center
+dists <- round(seq(0, 300, length.out = length(hec_names)))
+
+all_sites <- mapply(create_site, site.name = hec_names, 
+                    dist_from_pop = dists, 
+                    SIMPLIFY = F)
+all_sites <- bind_rows(all_sites)
+
+## create potential species list ----------------------
+sp_names <- mapply(make_name, 
+                   prefix = rep("sp"), number = 1:50, 
+                   USE.NAMES = F)
+potential_sp <- mapply(create_species, 
+                       species.name = sp_names, 
+                       prob.occurrence = seq(from = 0.001, to = 0.9, 
+                                             length.out = length(sp_names)), 
+                       prob.detection = round(runif(n = length(sp_names)), 
+                                              digits = 2), 
+                       SIMPLIFY = F)
+potential_sp <- bind_rows(potential_sp)
+
+## create "true" communities ---------------------
+set.seed(seed + 2)
+true_community <- generate_community_data(species.df = potential_sp, 
+                                          site.df = all_sites)
+
+## create realized samples -----------------------
+# for each hectad, determine how many sampling events there will be in the
+# hectad based on distance from population center.  Then, get that many sampling
+# events by sampling from the 100 potential sites within that hectad, with 
+# replacement.
+
+field_samples <- as.data.frame(matrix(nrow = 0, ncol = 0))
+
+n_samp <- round(all_sites$dist_from_pop/3)
+
+test <- sample_site(sp.occurrences = true_community[1, ], 
+                    species.df = potential_sp, 
+                    n = 3)
