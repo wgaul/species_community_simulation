@@ -220,14 +220,19 @@ species_presence <- function(species.row = NULL, site.row = NULL){
   }
   if (exists("variables") && length(variables) > 0) { # if sites and species share some variables
     for(i in 1:length(variables)) { # loop through usable variables
-      # probability is adjusted by adding the result of 
+      # - probability is adjusted by adding the result of 
       # (sp response slope * environmental variable value at site)
       # note that this may result in a probability outside the 0 to 1 range.  
       # this will be adjusted below
-      # NOTE: using double bracket subsetting because species.row and site.row
+      # - Check for NAs because both the species df and the site df may have
+      # rows which have some environmental variables unspecified (and therefore
+      # NA).  Those NAs will cause the multiplication below to give a 'prob'
+      # of NA, which will make it impossible to determine species presence.
+      # - NOTE: using double bracket subsetting because species.row and site.row
       # have class tbl_df which produces a 1x1 df instead of just the value
       # using single bracket subsetting.
-      if (!is.na(species.row[[1, which(names(species.row) == variables[i])]])) {
+      if (!is.na(species.row[[1, which(names(species.row) == variables[i])]]) &&
+          !is.na(site.row[[1, which(names(site.row) == variables[i])]])) {
         prob <- prob + species.row[[1, which(names(
           species.row) == variables[i])]] * 
           site.row[[1, which(names(site.row) == variables[i])]]
