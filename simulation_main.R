@@ -6,7 +6,7 @@
 ##
 ## author: Willson Gaul
 ## created: 9 Jun 2017
-## last modified: 27 June 2017
+## last modified: 28 June 2017
 ##
 #########################
 
@@ -105,13 +105,13 @@ create_species <- function(species.name = NULL,
   colnames(s) <- c("species.name", "prob.occurrence", "prob.detection", 
                    names(vars))
   
-  if(is.null(species.name)) {
+  if (is.null(species.name)) {
     s$species.name <- NA
     } else {s$species.name <- as.character(species.name)}
   s$prob.occurrence <- prob.occurrence
   s$prob.detection <- prob.detection
   
-  if(length(vars) > 0){
+  if (length(vars) > 0){
     s[1, 4:ncol(s)] <- vars
   }
   
@@ -119,11 +119,14 @@ create_species <- function(species.name = NULL,
 }
 
 ### create_site
-# input: site name, names and values for environmental variables for the site
+# input:  site name, 
+#         land.class - an optional character string designating land use class
+#           which will automatically be converted to a dummy variable
+#         ... optional names and values for additional environmental variables 
 # output: a 1-row dataframe with the site as row and environmental variables as
 #     columns
 
-create_site <- function(site.name, ...) {
+create_site <- function(site.name, land.class = NULL, ...) {
   # pass in as many environmental variables as you want as individual arguments
   # ... is zero or more arguments specifying environmental variables, 
   # where the name of the variable is the name of the argument, and the
@@ -131,12 +134,20 @@ create_site <- function(site.name, ...) {
   # e.g. alt_site(site.name = "FirstSite", altitude = 8160, 
   #               land_class = "forest")
   vars <- list(...)
-  site <- as.data.frame(matrix(nrow = 1, ncol = 1 + length(vars)))
+  site <- as.data.frame(matrix(nrow = 1, 
+                               ncol = 1 + length(vars) + length(land.class)))
   colnames(site) <- c("site.name", names(vars))
   site$site.name <- site.name
   
-  if(length(vars) > 0) {
-    site[1, 2:ncol(site)] <- vars
+  # add additional environmental variables if there are any
+  if (length(vars) > 0) { 
+    site[1, 2:(1 + length(vars))] <- vars
+  }
+  
+  # add dummy variable for land use class
+  if (!is.null(land.class)) {
+    colnames(site)[ncol(site)] <- land.class
+    site[1, ncol(site)] <- 1
   }
 
   site # return 1-row data frame with site name and envirnmental variables
@@ -171,15 +182,15 @@ create_observer <- function(observer.name, ...) {
 
 species_presence <- function(species.row = NULL, site.row = NULL){
   
-  # if(is.null(species.name) | is.null(site.name)) {
+  # if (is.null(species.name) | is.null(site.name)) {
   #   stop("You must specify species and site names")
   # }
-  if(is.null(species.row) || is.null(site.row)) {
+  if (is.null(species.row) || is.null(site.row)) {
     stop("You must pass in species and site dataframes with columns detailing
          the environmental variables at the sites and species' responses to 
          those variables.")
   }
-  if(nrow(species.row) > 1 || nrow(site.row) > 1) {
+  if (nrow(species.row) > 1 || nrow(site.row) > 1) {
     stop("There is more than one row in the species or site dataframes.")
   }
   
@@ -201,13 +212,13 @@ species_presence <- function(species.row = NULL, site.row = NULL){
   
   # if there are species response variables, use them to modify probability of
   # occurrence for the species
-  if(length(sp_response_vars) > 0) {
+  if (length(sp_response_vars) > 0) {
     # find variables for which both species response and value at the site
     # are specified.  These can be used to modify probability of occurrence
     # for the species at this site.
     variables <- sp_response_vars[which(sp_response_vars %in% site_env_vars)]
   }
-  if(exists("variables") && length(variables) > 0) { # if sites and species share some variables
+  if (exists("variables") && length(variables) > 0) { # if sites and species share some variables
     for(i in 1:length(variables)) { # loop through usable variables
       # probability is adjusted by adding the result of 
       # (sp response slope * environmental variable value at site)
@@ -216,7 +227,7 @@ species_presence <- function(species.row = NULL, site.row = NULL){
       # NOTE: using double bracket subsetting because species.row and site.row
       # have class tbl_df which produces a 1x1 df instead of just the value
       # using single bracket subsetting.
-      if(!is.na(species.row[[1, which(names(species.row) == variables[i])]])) {
+      if (!is.na(species.row[[1, which(names(species.row) == variables[i])]])) {
         prob <- prob + species.row[[1, which(names(
           species.row) == variables[i])]] * 
           site.row[[1, which(names(site.row) == variables[i])]]
@@ -225,8 +236,8 @@ species_presence <- function(species.row = NULL, site.row = NULL){
   }
   
   # set probability to 1 or 0 if needed
-  if(prob > 1) prob <- 1
-  if(prob < 0) prob <- 0
+  if (prob > 1) prob <- 1
+  if (prob < 0) prob <- 0
   
   # generate observation
   value <- rbinom(n = 1, size = 1, prob = prob)
@@ -247,36 +258,36 @@ species_presence <- function(species.row = NULL, site.row = NULL){
 
 observe_species <- function(species.present = NULL, species.df = NULL, 
                             observer = NULL, ...) {
-  if(is.null(species.present)) {
+  if (is.null(species.present)) {
     stop("Species presence or absence not specified.")}
-  if(species.present != 1 & species.present != 0) stop(
+  if (species.present != 1 & species.present != 0) stop(
     "species.present argument must be a 1 or 0.")
-  if(is.null(species.df)) {
+  if (is.null(species.df)) {
     stop("Data frame with species detection probability needed.")}
-  if(is.null(observer)) {
+  if (is.null(observer)) {
     warning("No observer traits specified.  Unmodified detection probability used.")
   }
   
   # if species is not present it will not be observed.  Right now there is no
   # option for creating "false positive" observations.
-  if(species.present == 0) return(0) 
+  if (species.present == 0) return(0) 
   
   det_vars <- list(...) # capture detection covariates if any
 
   # set baseline detection probability for this species
   det_prob <- species.df$prob.detection[1]
   
-  if(!is.null(observer)) {
+  if (!is.null(observer)) {
     # modify detection probability based on observer skill and identification
     # difficulty of the species
   }
   
-  if(length(det_vars) > 0) {
+  if (length(det_vars) > 0) {
     # modify detection probability based on detection covariates
   }
   
-  if(det_prob < 0) det_prob <- 0
-  if(det_prob > 1) det_prob <- 1
+  if (det_prob < 0) det_prob <- 0
+  if (det_prob > 1) det_prob <- 1
   
   # create an observerd/not observed value using the final detection probability
   value <- rbinom(size = 1, n = 1, prob = det_prob) 
@@ -298,7 +309,7 @@ observe_species <- function(species.present = NULL, species.df = NULL,
 # This is called by the user, and calls the species_presence() function
 
 generate_community_data <- function(species.df = NULL, site.df = NULL) {
-  if(is.null(species.df) || is.null(site.df)) {
+  if (is.null(species.df) || is.null(site.df)) {
     stop("You must provide data frames giving species names and responses to 
          environmental variables and site names and environmental variable values.")
   }
@@ -349,17 +360,17 @@ generate_community_data <- function(species.df = NULL, site.df = NULL) {
 
 sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1, 
                                   observers = NULL) {
-  if(is.null(sp.occurrences)) {
+  if (is.null(sp.occurrences)) {
     stop("You must provide species occurrence data.")
   }
-  if(is.null(species.df)) {
+  if (is.null(species.df)) {
     stop("You must provide a data frame containing at least the species names 
          and their detection probability.")
   }
-  if(nrow(sp.occurrences) > 1) {
+  if (nrow(sp.occurrences) > 1) {
     stop("More than one row passed into the sp.occurrences argument.")
   }
-  if(n < 1) {
+  if (n < 1) {
     return()
   }
   
