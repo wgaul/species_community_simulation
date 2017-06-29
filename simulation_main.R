@@ -6,7 +6,7 @@
 ##
 ## author: Willson Gaul
 ## created: 9 Jun 2017
-## last modified: 28 June 2017
+## last modified: 29 June 2017
 ##
 #########################
 
@@ -208,6 +208,8 @@ species_presence <- function(species.row = NULL, site.row = NULL){
   site_env_vars <- names(site.row)
   site_env_vars <- site_env_vars[-which(site_env_vars == "site.name")]
   
+  # get baseline probability, which will be modified potentially multiple times
+  # by environmental variables below
   prob <- species.row$prob.occurrence[1]
   
   # if there are species response variables, use them to modify probability of
@@ -388,8 +390,10 @@ sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1,
   
   for(i in 1:nrow(samples)) {
     for(j in 2:ncol(samples)) {
-      samples[i, j] <- observe_species(species.present = sp.occurrences[1, j], 
-                                       species.df = species.df)
+      samples[i, j] <- observe_species(
+        species.present = sp.occurrences[1, j], 
+        species.df = species.df[species.df$species.name == 
+                                  colnames(samples)[j], ])
     }
   }
   
