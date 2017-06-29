@@ -271,6 +271,9 @@ observe_species <- function(species.present = NULL, species.df = NULL,
     "species.present argument must be a 1 or 0.")
   if (is.null(species.df)) {
     stop("Data frame with species detection probability needed.")}
+  if (nrow(species.df) != 1) {
+    stop("species.df must be a 1-row dataframe with parameters for a single species.")
+  }
   if (is.null(observer)) {
     warning("No observer traits specified.  Unmodified detection probability used.")
   }
