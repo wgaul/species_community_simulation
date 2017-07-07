@@ -202,7 +202,9 @@ species_presence <- function(species.row = NULL, site.row = NULL){
                                                        species.row)])
   sp_response_vars <- names(species.row)
   sp_response_vars <- sp_response_vars[-which(
-    sp_response_vars %in% c("species.name", "prob.occurrence", "prob.detection"))]
+    sp_response_vars %in% c("species.name", 
+                            "prob.occurrence", 
+                            "prob.detection"))]
   
   # extract names of site environmental variables
   site_env_vars <- names(site.row)
