@@ -66,7 +66,15 @@
 require(dplyr)
 
 ### Function Definitions
-#!!!!! READ FUNCTIONS CHAPTER BEFORE WRITING !!!!#####
+logit <- function(p) {
+  # ARGS: p: probability (0 to 1)
+  log(p/(1-p))
+}
+
+logistic <- function(x) {
+  # ARGS: x:
+  1 / (1 + exp(-x))
+}
 
 ################## Begin Create Functional Units ################
 ###### Each of these functions creates a single functional unit
@@ -224,10 +232,13 @@ species_presence <- function(species.row = NULL, site.row = NULL){
   }
   if (exists("variables") && length(variables) > 0) { # if sites and species share some variables
     for(i in 1:length(variables)) { # loop through usable variables
-      # - probability is adjusted by adding the result of 
-      # (sp response slope * environmental variable value at site)
-      # note that this may result in a probability outside the 0 to 1 range.  
-      # this will be adjusted below
+      # - probability is adjusted by adding the result of
+      # (sp response slope * environmental variable value at site) to 
+      # the logit(prob) by passing (slope*variableValue) into logistic function
+      
+      # !!note that this may result in a probability outside the 0 to 1 range.
+      # !!this will be adjusted below
+      
       # - Check for NAs because both the species df and the site df may have
       # rows which have some environmental variables unspecified (and therefore
       # NA).  Those NAs will cause the multiplication below to give a 'prob'
@@ -237,16 +248,19 @@ species_presence <- function(species.row = NULL, site.row = NULL){
       # using single bracket subsetting.
       if (!is.na(species.row[[1, which(names(species.row) == variables[i])]]) &&
           !is.na(site.row[[1, which(names(site.row) == variables[i])]])) {
-        prob <- prob + species.row[[1, which(names(
-          species.row) == variables[i])]] * 
-          site.row[[1, which(names(site.row) == variables[i])]]
+        #spVarCol <- which(names(species.row) == variables[i])
+        #siteVarCol <- which(names(site.row) == variables[i])
+        coef <- species.row[[1, variables[i]]]
+        varValue <- site.row[[1, variables[i]]]
+        lin_comb <- prob + coef * varValue
+        prob <- logistic(lin_comb)
       }
     }
   }
   
   # set probability to 1 or 0 if needed
-  if (prob > 1) prob <- 1
-  if (prob < 0) prob <- 0
+  if (prob > 1) stop("Probability greater than 1. Logistic transformation must not have worked.")
+  if (prob < 0) stop("Probability less than 0. Logistic transformation must not have worked.")
   
   # generate observation
   value <- rbinom(n = 1, size = 1, prob = prob)
