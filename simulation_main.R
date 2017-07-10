@@ -312,20 +312,20 @@ observe_species <- function(species.present = NULL, species.df = NULL,
 ######################## Begin dataset realizing functions ############
 
 ### generate_community_data
-# function to create a dataframe of species presence/absence at sites
-# input:  a data frame of species with responses to envrionmental variables, 
-#         a data frame of sites with env. variable values
-# output: a community data frame with sites as rows, species as columns, and
-#         a 1 or 0 indicating presence or absence of each species at each site
-#
-# This is called by the user, and calls the set_species_presence() function
+
 
 generate_community_data <- function(species.df = NULL, site.df = NULL) {
+  # Create a dataframe of true species presence/absence at sites
+  # This is called by the user, and calls the set_species_presence() function
+  # ARGS: species.df: a data frame of species with responses to envrionmental 
+  #         variables 
+  #       site.df: a data frame of sites with env. variable values
+  # output: a community data frame with sites as rows, species as columns, and
+  #         a 1 or 0 indicating presence or absence of each species at each site
   if (is.null(species.df) || is.null(site.df)) {
     stop("You must provide data frames giving species names and responses to 
          environmental variables and site names and environmental variable values.")
   }
-  
   # initialize results df
   # a row for each site, a column for each species, plus a column for site name
   sp_occurrences <- as.data.frame(matrix(nrow = nrow(site.df), 
@@ -346,32 +346,27 @@ generate_community_data <- function(species.df = NULL, site.df = NULL) {
         site.row = site.df[site.df$site.name == site, ])
     }
   }
-  
   sp_occurrences # return the data frame of species occurrences at sites
 }
 
-
-### sample_site
-# function to create a sample of species at a single site based on the 
-# occurrence data produced by generate_community_data()
-#
-# inputs: sp.occurrences: a 1-row dataframe with site name as the first column,
-#           species as the remaining columns, with 1/0 presence/absence data;
-#         species.df: a dataframe defining the traits of each species, 
-#           including detection probability, with species as rows and traits as 
-#           columns;
-#         n: the number of samples (or visits) to produce for this site
-#         observers: an optional list containing lists defining the traits 
-#           of observers
-# outputs: a community data frame with site visits as rows, a column for site
-#         name, a column for observer name, and columns for each potential 
-#         species.  Detection or non-detection of each species at each site is
-#         indicated with a 1 or 0
-#
-# The user calls this directly, and it calls observe_species()
-
 sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1, 
                                   observers = NULL) {
+  # Create a sample of species at a single site based on the 
+  # occurrence data produced by generate_community_data()
+  #
+  # ARGS: sp.occurrences: a 1-row dataframe with site name as the first column,
+  #           species as the remaining columns, with 1/0 presence/absence data
+  #       species.df: a dataframe defining the traits of each species, including
+  #           detection probability, with species as rows and traits as columns
+  #       n: the number of samples (or visits) to produce for this site
+  #       observers: an optional list containing lists defining the traits 
+  #           of observers
+  # outputs: a community data frame with site visits as rows, a column for site
+  #         name, a column for observer name, and columns for each potential 
+  #         species.  Detection or non-detection of each species at each site is
+  #         indicated with a 1 or 0
+  #
+  # The user calls this directly, and it calls observe_species()
   if (is.null(sp.occurrences)) {
     stop("You must provide species occurrence data.")
   }
@@ -401,7 +396,6 @@ sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1,
                                   colnames(samples)[j], ])
     }
   }
-  
   samples # return the df of n site samples (visits) for this site
 }
 
