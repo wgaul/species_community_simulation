@@ -6,7 +6,7 @@
 ##
 ## author: Willson Gaul
 ## created: 9 Jun 2017
-## last modified: 7 July 2017
+## last modified: 10 July 2017
 ##
 #########################
 
@@ -125,21 +125,19 @@ create_species <- function(species.name = NULL,
   s # return the 1-row data frame for this species
 }
 
-### create_site
-# input:  site name, 
-#         land.class - an optional character string designating land use class
-#           which will automatically be converted to a dummy variable
-#         ... optional names and values for additional environmental variables 
-# output: a 1-row dataframe with the site as row and environmental variables as
-#     columns
-
 create_site <- function(site.name, land.class = NULL, ...) {
+  # Create a single site based on user-specified environmental variables
+  # ARGS: site.name: a character string with the site name
+  #       land.class: an optional character string designating land use class
+  #           which will automatically be converted to a dummy variable
+  #         ... optional names and values for additional environmental variables
+  # output: a 1-row dataframe with the site as row and environmental variables 
+  #           as columns
+  #
   # pass in as many environmental variables as you want as individual arguments
-  # ... is zero or more arguments specifying environmental variables, 
   # where the name of the variable is the name of the argument, and the
   # value of the variable is the value of the argument.
-  # e.g. alt_site(site.name = "FirstSite", altitude = 8160, 
-  #               land_class = "forest")
+  # e.g. alt_site(site.name = "st1", altitude = 450, land_class = "forest")
   vars <- list(...)
   site <- as.data.frame(matrix(nrow = 1, 
                                ncol = 1 + length(vars) + length(land.class)))
