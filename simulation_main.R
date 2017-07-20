@@ -6,7 +6,7 @@
 ##
 ## author: Willson Gaul
 ## created: 9 Jun 2017
-## last modified: 10 July 2017
+## last modified: 14 July 2017
 ##
 #########################
 
@@ -71,7 +71,7 @@ logit <- function(p) {
   log(p / (1 - p))
 }
 logistic <- function(x) {
-  # ARGS: x: a linear combination of parameters (e.g. prob + coef(varValue))
+  # ARGS: x: a linear combination of parameters (e.g. prob + coef*varValue)
   1 / (1 + exp(-x))
 }
 
@@ -299,7 +299,7 @@ observe_species <- function(species.present = NULL, species.df = NULL,
   }
   
   # stop if probability is outside 0 to 1
-  if (prob > 1 || prob < 0) stop("Probability is outside the 0 to 1 range in observe_species(). Perhaps logistic transformation didn't work?")
+  if (det_prob > 1 || det_prob < 0) stop("Probability is outside the 0 to 1 range in observe_species(). Perhaps logistic transformation didn't work?")
   
   # create an observerd/not observed value using the final detection probability
   value <- rbinom(size = 1, n = 1, prob = det_prob) 
@@ -310,9 +310,6 @@ observe_species <- function(species.present = NULL, species.df = NULL,
 ####################### end individual realizing functions ##########
 
 ######################## Begin dataset realizing functions ############
-
-### generate_community_data
-
 
 generate_community_data <- function(species.df = NULL, site.df = NULL) {
   # Create a dataframe of true species presence/absence at sites
@@ -350,7 +347,7 @@ generate_community_data <- function(species.df = NULL, site.df = NULL) {
 }
 
 sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1, 
-                                  observers = NULL) {
+                        observers = NULL) {
   # Create a sample of species at a single site based on the 
   # occurrence data produced by generate_community_data()
   #
