@@ -6,7 +6,7 @@
 ##
 ## author: Willson Gaul
 ## created: 9 Jun 2017
-## last modified: 29 June 2017
+## last modified: 14 July 2017
 ##
 #########################
 
@@ -31,28 +31,28 @@
 ### these first 3 functions output the rows for the first 3 dfs listed above
 # use these to build the universe which creates the realized datasets
 
-#   - create species
+#   - create_species
 #     -- pass in parameters of species responses to env. variables
 
-#   - create site
+#   - create_site
 #     -- pass in environmental values for the site
 
-#   - create observer
+#   - create_observer
 #     -- pass in values for observer traits
 
 #### these functions create the individual cells for realized datasets
 
-#   - species_presence
+#   - set_species_presence
 #     -- creates a presence/absence value for a species 
 #     -- inputs: species parameters, environmental parameters of site
 
-#   - species_observed
+#   - observe_species
 #     -- creates a 1/0 observed value for a species
 #     -- inputs: species presence/absence value, detection covariates, 
 #         observer traits
 
 #   - create site-level species communities
-#     -- use the species_presence function to get a presence/absence value for
+#     -- use the set_species_presence function to get a presence/absence value for
 #       each species based on the species's parameters and environmental 
 #       parameters at a site
 #     -- inputs: a df or list of site environmental parameters, 
@@ -66,7 +66,14 @@
 require(dplyr)
 
 ### Function Definitions
-#!!!!! READ FUNCTIONS CHAPTER BEFORE WRITING !!!!#####
+logit <- function(p) {
+  # ARGS: p: a probability (0 to 1)
+  log(p / (1 - p))
+}
+logistic <- function(x) {
+  # ARGS: x: a linear combination of parameters (e.g. prob + coef*varValue)
+  1 / (1 + exp(-x))
+}
 
 ################## Begin Create Functional Units ################
 ###### Each of these functions creates a single functional unit
@@ -118,21 +125,19 @@ create_species <- function(species.name = NULL,
   s # return the 1-row data frame for this species
 }
 
-### create_site
-# input:  site name, 
-#         land.class - an optional character string designating land use class
-#           which will automatically be converted to a dummy variable
-#         ... optional names and values for additional environmental variables 
-# output: a 1-row dataframe with the site as row and environmental variables as
-#     columns
-
 create_site <- function(site.name, land.class = NULL, ...) {
+  # Create a single site based on user-specified environmental variables
+  # ARGS: site.name: a character string with the site name
+  #       land.class: an optional character string designating land use class
+  #           which will automatically be converted to a dummy variable
+  #         ... optional names and values for additional environmental variables
+  # output: a 1-row dataframe with the site as row and environmental variables 
+  #           as columns
+  #
   # pass in as many environmental variables as you want as individual arguments
-  # ... is zero or more arguments specifying environmental variables, 
   # where the name of the variable is the name of the argument, and the
   # value of the variable is the value of the argument.
-  # e.g. alt_site(site.name = "FirstSite", altitude = 8160, 
-  #               land_class = "forest")
+  # e.g. alt_site(site.name = "st1", altitude = 450, land_class = "forest")
   vars <- list(...)
   site <- as.data.frame(matrix(nrow = 1, 
                                ncol = 1 + length(vars) + length(land.class)))
@@ -171,20 +176,16 @@ create_observer <- function(observer.name, ...) {
 
 ###################### Begin Individual Realizing Functions ##################
 
-### species_presence
-# inputs: a 1-row data frame for the species, a 1-row data frame for the site
-# outputs: a presence/absence value for a species 
-# e.g. species_presence(0.05, resp.elevation = 0.001, resp.forest = -1)
-#
-# This will not be called by the user - the user will call the "create
-# community" function or something like that, which will call this for each
-# species/site cell.
-
-species_presence <- function(species.row = NULL, site.row = NULL){
-  
-  # if (is.null(species.name) | is.null(site.name)) {
-  #   stop("You must specify species and site names")
-  # }
+set_species_presence <- function(species.row = NULL, site.row = NULL) {
+  # Determine whether a species is present at a site
+  # This will not be called by the user - the user will call the "create
+  # community" function or something like that, which will call this for each
+  # species/site cell.
+  # ARGS:
+  #   species.row: a 1-row data frame for the species
+  #   site.row: a 1-row data frame for the site
+  #   e.g. set_species_presence(0.05, resp.elevation = 0.001, resp.forest = -1)
+  # OUTPUT: a presence/absence value for a species 
   if (is.null(species.row) || is.null(site.row)) {
     stop("You must pass in species and site dataframes with columns detailing
          the environmental variables at the sites and species' responses to 
@@ -224,10 +225,9 @@ species_presence <- function(species.row = NULL, site.row = NULL){
   }
   if (exists("variables") && length(variables) > 0) { # if sites and species share some variables
     for(i in 1:length(variables)) { # loop through usable variables
-      # - probability is adjusted by adding the result of 
-      # (sp response slope * environmental variable value at site)
-      # note that this may result in a probability outside the 0 to 1 range.  
-      # this will be adjusted below
+      # - probability is adjusted by adding the result of
+      # (sp response slope * environmental variable value at site) to 
+      # the logit(prob) by passing (slope*variableValue) into logistic function
       # - Check for NAs because both the species df and the site df may have
       # rows which have some environmental variables unspecified (and therefore
       # NA).  Those NAs will cause the multiplication below to give a 'prob'
@@ -235,19 +235,19 @@ species_presence <- function(species.row = NULL, site.row = NULL){
       # - NOTE: using double bracket subsetting because species.row and site.row
       # have class tbl_df which produces a 1x1 df instead of just the value
       # using single bracket subsetting.
-      if (!is.na(species.row[[1, which(names(species.row) == variables[i])]]) &&
-          !is.na(site.row[[1, which(names(site.row) == variables[i])]])) {
-        prob <- prob + species.row[[1, which(names(
-          species.row) == variables[i])]] * 
-          site.row[[1, which(names(site.row) == variables[i])]]
+      if (!is.na(species.row[[1, variables[i]]]) &&
+          !is.na(site.row[[1, variables[i]]])) {
+        coef <- species.row[[1, variables[i]]]
+        varValue <- site.row[[1, variables[i]]]
+        logit_prob <- logit(prob) + coef * varValue
+        prob <- logistic(logit_prob)
       }
     }
   }
   
-  # set probability to 1 or 0 if needed
-  if (prob > 1) prob <- 1
-  if (prob < 0) prob <- 0
-  
+  # stop if probability is outside 0 to 1
+  if (prob > 1 || prob < 0) stop("Probability is outside the 0 to 1 range in set_species_presence(). Perhaps logistic transformation didn't work?")
+
   # generate observation
   value <- rbinom(n = 1, size = 1, prob = prob)
   
@@ -298,8 +298,8 @@ observe_species <- function(species.present = NULL, species.df = NULL,
     # modify detection probability based on detection covariates
   }
   
-  if (det_prob < 0) det_prob <- 0
-  if (det_prob > 1) det_prob <- 1
+  # stop if probability is outside 0 to 1
+  if (det_prob > 1 || det_prob < 0) stop("Probability is outside the 0 to 1 range in observe_species(). Perhaps logistic transformation didn't work?")
   
   # create an observerd/not observed value using the final detection probability
   value <- rbinom(size = 1, n = 1, prob = det_prob) 
@@ -311,21 +311,18 @@ observe_species <- function(species.present = NULL, species.df = NULL,
 
 ######################## Begin dataset realizing functions ############
 
-### generate_community_data
-# function to create a dataframe of species presence/absence at sites
-# input:  a data frame of species with responses to envrionmental variables, 
-#         a data frame of sites with env. variable values
-# output: a community data frame with sites as rows, species as columns, and
-#         a 1 or 0 indicating presence or absence of each species at each site
-#
-# This is called by the user, and calls the species_presence() function
-
 generate_community_data <- function(species.df = NULL, site.df = NULL) {
+  # Create a dataframe of true species presence/absence at sites
+  # This is called by the user, and calls the set_species_presence() function
+  # ARGS: species.df: a data frame of species with responses to envrionmental 
+  #         variables 
+  #       site.df: a data frame of sites with env. variable values
+  # output: a community data frame with sites as rows, species as columns, and
+  #         a 1 or 0 indicating presence or absence of each species at each site
   if (is.null(species.df) || is.null(site.df)) {
     stop("You must provide data frames giving species names and responses to 
          environmental variables and site names and environmental variable values.")
   }
-  
   # initialize results df
   # a row for each site, a column for each species, plus a column for site name
   sp_occurrences <- as.data.frame(matrix(nrow = nrow(site.df), 
@@ -340,38 +337,33 @@ generate_community_data <- function(species.df = NULL, site.df = NULL) {
       sp <- colnames(sp_occurrences)[j] # name of species to fill
       
       # pass the row for this site and the row for this species into 
-      # species_presence to get a 1/0 value
-      sp_occurrences[i, sp] <- species_presence(
+      # set_species_presence to get a 1/0 value
+      sp_occurrences[i, sp] <- set_species_presence(
         species.row = species.df[which(species.df$species.name == sp), ], 
         site.row = site.df[site.df$site.name == site, ])
     }
   }
-  
   sp_occurrences # return the data frame of species occurrences at sites
 }
 
-
-### sample_site
-# function to create a sample of species at a single site based on the 
-# occurrence data produced by generate_community_data()
-#
-# inputs: sp.occurrences: a 1-row dataframe with site name as the first column,
-#           species as the remaining columns, with 1/0 presence/absence data;
-#         species.df: a dataframe defining the traits of each species, 
-#           including detection probability, with species as rows and traits as 
-#           columns;
-#         n: the number of samples (or visits) to produce for this site
-#         observers: an optional list containing lists defining the traits 
-#           of observers
-# outputs: a community data frame with site visits as rows, a column for site
-#         name, a column for observer name, and columns for each potential 
-#         species.  Detection or non-detection of each species at each site is
-#         indicated with a 1 or 0
-#
-# The user calls this directly, and it calls observe_species()
-
 sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1, 
-                                  observers = NULL) {
+                        observers = NULL) {
+  # Create a sample of species at a single site based on the 
+  # occurrence data produced by generate_community_data()
+  #
+  # ARGS: sp.occurrences: a 1-row dataframe with site name as the first column,
+  #           species as the remaining columns, with 1/0 presence/absence data
+  #       species.df: a dataframe defining the traits of each species, including
+  #           detection probability, with species as rows and traits as columns
+  #       n: the number of samples (or visits) to produce for this site
+  #       observers: an optional list containing lists defining the traits 
+  #           of observers
+  # outputs: a community data frame with site visits as rows, a column for site
+  #         name, a column for observer name, and columns for each potential 
+  #         species.  Detection or non-detection of each species at each site is
+  #         indicated with a 1 or 0
+  #
+  # The user calls this directly, and it calls observe_species()
   if (is.null(sp.occurrences)) {
     stop("You must provide species occurrence data.")
   }
@@ -401,7 +393,6 @@ sample_site <- function(sp.occurrences = NULL, species.df = NULL, n = 1,
                                   colnames(samples)[j], ])
     }
   }
-  
   samples # return the df of n site samples (visits) for this site
 }
 
