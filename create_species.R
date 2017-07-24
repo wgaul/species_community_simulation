@@ -16,7 +16,7 @@
 #   detection, responses to env. variables, and other charateristics
 # output: a 1-row dataframe of parameters for a single species
 
-create_species <- function(species.name = NULL, 
+create_species <- function(formula = NULL, 
                            prob.occurrence = 1, prob.detection = 1, 
                            occ.coefficients = NULL, occ.terms = NULL, 
                            det.coefficients = NULL, det.terms = NULL) {
