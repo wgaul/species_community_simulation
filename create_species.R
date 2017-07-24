@@ -94,18 +94,57 @@ create_species <- function(species.name = NULL,
     stop("Any values passed to det.terms must be in the form of a character vector")
   }
   
+
+  
+  # construct function to determine species probability of occurrence
+  occ_f <- function(prob = NULL, 
+                     occ.coefficients = NULL, 
+                     occ.term.vals = NULL) {
+    ## TODO: this will require a change in set_species_presence
+    # returns the probability of occurrence adjusted by environmental covariates
+    # this takes as input the values of all coefficients and all variables
+    # This function is called by 'set_species_presence()'
+    # ARGS: prob: the baseline probability of occurrence
+    #       occ.coefficients: a list of numeric coefficients for occupancy covs
+    #       occ.term.vals = a list of numeric values for environmental covariates
+    #           at a single site
+    logit_prob <- logit(prob)
+    for (t in 1:length(occ.coefficients)) {
+      coef <- occ.coefficients[[t]]
+      varValue <- occ.term.vals[[t]]
+      logit_prob <- logit_prob + coef * varValue
+    }
+    prob <- logistic(logit_prob)
+    prob
+  }
+  
+  # construct function to determine species probability of detection
+  det_f <- function(prob = NULL, 
+                     det.coefficients = NULL, 
+                     det.term.vals = NULL) {
+    ## TODO: this will require a change in ?sample_species()?
+    # returns the probability of detection adjusted by covariates
+    # this takes as input the values of all coefficients and all variables
+    # This function is called by '???'
+    # ARGS: prob: the baseline probability of detection
+    #       det.coefficients: a list of numeric coefficients for detection covs
+    #       det.term.vals = a list of numeric values for detection covariates
+    #           for a single survey/sample
+    logit_prob <- logit(prob)
+    for (t in 1:length(occ.coefficients)) {
+      coef <- occ.coefficients[[t]]
+      varValue <- occ.term.vals[[t]]
+      logit_prob <- logit_prob + coef * varValue
+    }
+    prob <- logistic(logit_prob)
+    prob
+  }
+  
   # l will be the object returned at the end of the function
-  l <- list(species.name = species.name, 
-            base.prob.occurrence = prob.occurrence, 
-            base.prob.detection = prob.detection, 
-            occ.function = NULL, 
-            det.function = NULL)
-  
-  # parse occurrence coefficients and terms
-  
-  
-  # parse detection coefficients and terms
-  
-  
+  l <- list(species.name = as.character(species.name), 
+            base.prob.occurrence = as.numeric(prob.occurrence), 
+            base.prob.detection = as.numeric(prob.detection), 
+            occ.function = occ_f, 
+            det.function = det_f)
   l # return the list of characteristics for this species
 }
