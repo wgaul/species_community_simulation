@@ -8,7 +8,6 @@
 ## author: Willson Gaul
 ## created: 9 Jun 2017
 ## last modified: 24 July 2017
-##
 #########################
 
 ### create_species
@@ -61,6 +60,10 @@ create_species <- function(species.name = NULL,
   #       species is to detect e.g. by people of lower skill level).
   # OUTPUT: a list containing the following elements:
   #   species.name: character string with the name of the species
+  #   base.prob.occurrence: the baseline probability of occurrence
+  #   base.prob.deteciton: the baseline probability of detection
+  #   occ.equation: character string describing the response of occurrence probability to the environmental covariates
+  #   det.equation: character string describing response of detection probability to detection covariates
   #   occ.resp.function: a function giving the species's detection probability 
   #       as a function of the baseline prob.occurrence (intercept) plus the 
   #       coefficients and site-level values for occurrence covariates given 
@@ -93,8 +96,6 @@ create_species <- function(species.name = NULL,
   if(!is.null(det.terms) && !is.character(det.terms)) {
     stop("Any values passed to det.terms must be in the form of a character vector")
   }
-  
-
   
   # construct function to determine species probability of occurrence
   occ_f <- function(prob = NULL, 
@@ -140,10 +141,21 @@ create_species <- function(species.name = NULL,
     prob
   }
   
-  # l will be the object returned at the end of the function
+  # create character strings describing the equations for occ. and det. prob.
+  occ_eq <- mapply(FUN = paste, occ.coefficients, occ.terms, 
+                   MoreArgs = list(sep = ""))
+  occ_eq <- paste(occ_eq, collapse = " + ")
+  occ_eq <- paste0("prob.occurrence = base.prob + ", occ_eq)
+  det_eq <- mapply(FUN = paste, det.coefficients, det.terms,
+                   MoreArgs = list(sep = ""))
+  det_eq <- paste(det_eq, collapse = " + ")
+  det_eq <- paste0("prob.detection = base.prob + ", det_eq)
+  
   l <- list(species.name = as.character(species.name), 
             base.prob.occurrence = as.numeric(prob.occurrence), 
             base.prob.detection = as.numeric(prob.detection), 
+            occ.equation = occ_eq, 
+            det.equation = det_eq, 
             occ.function = occ_f, 
             det.function = det_f)
   l # return the list of characteristics for this species
