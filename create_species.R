@@ -17,8 +17,8 @@
 
 create_species <- function(species.name = NULL, 
                            prob.occurrence = 1, prob.detection = 1, 
-                           occ.coefficients = NULL, occ.terms = NULL, 
-                           det.coefficients = NULL, det.terms = NULL) {
+                           occ.response.function = NULL, 
+                           det.response.function = NULL) {
   # Construct a list defining the characteristics of each species
   # ARGS: 
   #   species.name: a character string
@@ -62,8 +62,6 @@ create_species <- function(species.name = NULL,
   #   species.name: character string with the name of the species
   #   base.prob.occurrence: the baseline probability of occurrence
   #   base.prob.deteciton: the baseline probability of detection
-  #   occ.equation: character string describing the response of occurrence probability to the environmental covariates
-  #   det.equation: character string describing response of detection probability to detection covariates
   #   occ.resp.function: a function giving the species's detection probability 
   #       as a function of the baseline prob.occurrence (intercept) plus the 
   #       coefficients and site-level values for occurrence covariates given 
@@ -72,7 +70,6 @@ create_species <- function(species.name = NULL,
   #       as a function of the baseline prob.detection (intercept) plus the
   #       coefficients and site/visit/observer-level values for detection 
   #       covariates given in det.terms
-  #   
   if(is.null(species.name) || !is.character(species.name)) {
     stop("Provide a character vector to species.name")
   }
@@ -84,79 +81,17 @@ create_species <- function(species.name = NULL,
      prob.detection > 1) {
     stop("Provide a numeric value between 0 and 1 to prob.detection")
   }
-  if(!is.null(occ.coefficients) && !is.numeric(occ.coefficients)) {
-    stop("Any values passed to occ.coefficients must be in the form of a numeric vector")
+  if(is.null(occ.response.function) || !is.function(occ.response.function)) {
+    stop("Please provide a function to the occ.response.function argument.")
   }
-  if(!is.null(occ.terms) && !is.character(occ.terms)) {
-    stop("Any values passed to occ.terms must be in the form of a character vector")
+  if(is.null(det.response.function) || !is.function(det.response.function)) {
+    stop("Please provide a function to the det.response.function argument.")
   }
-  if(!is.null(det.coefficients) && !is.numeric(det.coefficients)) {
-    stop("Any values passed to det.coefficients must be in the form of a numeric vector")
-  }
-  if(!is.null(det.terms) && !is.character(det.terms)) {
-    stop("Any values passed to det.terms must be in the form of a character vector")
-  }
-  
-  # construct function to determine species probability of occurrence
-  occ_f <- function(prob = NULL, 
-                     occ.coefficients = NULL, 
-                     occ.term.vals = NULL) {
-    ## TODO: this will require a change in set_species_presence
-    # returns the probability of occurrence adjusted by environmental covariates
-    # this takes as input the values of all coefficients and all variables
-    # This function is called by 'set_species_presence()'
-    # ARGS: prob: the baseline probability of occurrence
-    #       occ.coefficients: a list of numeric coefficients for occupancy covs
-    #       occ.term.vals = a list of numeric values for environmental covariates
-    #           at a single site
-    logit_prob <- logit(prob)
-    for (t in 1:length(occ.coefficients)) {
-      coef <- occ.coefficients[[t]]
-      varValue <- occ.term.vals[[t]]
-      logit_prob <- logit_prob + coef * varValue
-    }
-    prob <- logistic(logit_prob)
-    prob
-  }
-  
-  # construct function to determine species probability of detection
-  det_f <- function(prob = NULL, 
-                     det.coefficients = NULL, 
-                     det.term.vals = NULL) {
-    ## TODO: this will require a change in ?sample_species()?
-    # returns the probability of detection adjusted by covariates
-    # this takes as input the values of all coefficients and all variables
-    # This function is called by '???'
-    # ARGS: prob: the baseline probability of detection
-    #       det.coefficients: a list of numeric coefficients for detection covs
-    #       det.term.vals = a list of numeric values for detection covariates
-    #           for a single survey/sample
-    logit_prob <- logit(prob)
-    for (t in 1:length(occ.coefficients)) {
-      coef <- occ.coefficients[[t]]
-      varValue <- occ.term.vals[[t]]
-      logit_prob <- logit_prob + coef * varValue
-    }
-    prob <- logistic(logit_prob)
-    prob
-  }
-  
-  # create character strings describing the equations for occ. and det. prob.
-  occ_eq <- mapply(FUN = paste, occ.coefficients, occ.terms, 
-                   MoreArgs = list(sep = ""))
-  occ_eq <- paste(occ_eq, collapse = " + ")
-  occ_eq <- paste0("prob.occurrence = base.prob + ", occ_eq)
-  det_eq <- mapply(FUN = paste, det.coefficients, det.terms,
-                   MoreArgs = list(sep = ""))
-  det_eq <- paste(det_eq, collapse = " + ")
-  det_eq <- paste0("prob.detection = base.prob + ", det_eq)
   
   l <- list(species.name = as.character(species.name), 
             base.prob.occurrence = as.numeric(prob.occurrence), 
             base.prob.detection = as.numeric(prob.detection), 
-            occ.equation = occ_eq, 
-            det.equation = det_eq, 
-            occ.function = occ_f, 
-            det.function = det_f)
+            occ.function = occ.response.function, 
+            det.function = det.response.function)
   l # return the list of characteristics for this species
 }

@@ -63,6 +63,8 @@
 # setwd("~/Documents/Data_Analysis/UCD/simulation/")
 # setwd("~/Dropbox/Link_to_Documents/Data_Analysis/UCD/simulation/")
 
+source("./create_species.R")
+
 require(dplyr)
 
 ### Function Definitions
